@@ -1,0 +1,5 @@
+name = Yandex money API
+description = "Yandex money core module."
+package = Yandex Money
+core = 7.x
+configure = admin/config/yamoney

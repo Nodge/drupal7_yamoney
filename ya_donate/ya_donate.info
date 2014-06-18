@@ -1,0 +1,6 @@
+name = Yandex Donate
+description = "Yandex money module for donate in site."
+package = Yandex Money
+core = 7.x
+dependencies[] = yamoney
+configure = admin/config/yamoney/donate

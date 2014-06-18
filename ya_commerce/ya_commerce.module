@@ -1,0 +1,200 @@
+<?php
+/**
+ * Implements hook_menu().
+ */
+function ya_commerce_menu() {
+  $items = array();
+  return $items;
+}
+
+/**
+ * Implements hook_commerce_payment_method_info().
+ */
+function ya_commerce_commerce_payment_method_info() {
+  $payment_methods = array();
+
+  $icon = '<img src="/' . drupal_get_path('module', 'ya_commerce') . '/images/yandex-logo.png">';
+  $display_title = t('Yandex money <br/>!logo', array('!logo' => $icon));
+
+  $payment_methods['ya_commerce'] = array(
+      'base' => 'ya_commerce',
+      'title' => t('Yandex money'),
+      'short_title' => t('yandex'),
+      'display_title' => $display_title,
+      'description' => t('yandex money payment method'),
+      'terminal' => FALSE,
+      'offsite' => TRUE,
+      'offsite_autoredirect' => FALSE,
+      'active' => TRUE,
+  );
+  return $payment_methods;
+}
+
+/**
+ * Payment method callback: checkout form.
+ */
+function ya_commerce_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
+  $form = array();
+  $disabled = FALSE;
+  $payment = yamoney_get_payments();
+  if(count($payment) == 1) {
+    $disabled = TRUE;
+  }
+  $form['pay_method'] = array(
+    '#type' => 'select',
+    '#title' => t('Select your payment type:'),
+    '#default_value' => 'PC',
+    '#options' => $payment,
+    '#disabled' => $disabled,
+  );
+  
+  return $form;
+}
+
+/**
+ * Payment method callback: checkout form submission.
+ */
+function ya_commerce_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge) {
+  $order->data['ya_commerce'] = $pane_values;
+}
+
+/**
+ * Payment method callback: payment redirect form.
+ */
+function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method) {
+  global $user;
+  $wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $currency_code = $wrapper->commerce_order_total->currency_code->value();
+  $amount = $wrapper->commerce_order_total->amount->value();
+  $amount = round(commerce_currency_amount_to_decimal($amount, $currency_code), 2);
+  $pay_params = array(
+    'uid' => $user->uid,
+    'amount' => $amount,
+    'created' => time(),
+    'status' => 'in checkout',
+    'mail' => $user->mail,
+    'order' => $order->order_id,
+    'data' => array(),
+  );
+  yamoney_create_transaction($pay_params);
+  if(variable_get('yandex_user_status', 0)){
+    return ya_commerce_get_shop_form($form, &$form_state, $order, $amount);
+  }
+  else {
+    return ya_commerce_get_quick_form($form, &$form_state, $order, $amount);
+  }
+}
+
+function ya_commerce_get_quick_form($form, &$form_state, $order, $amount){
+  if(variable_get('yandex_mode', 'test') == 'test') {
+    $form['#action'] = 'https://demomoney.yandex.ru/quickpay/confirm.xml';  
+  }
+  else {
+    $form['#action'] = 'https://money.yandex.ru/quickpay/confirm.xml';
+  }
+  
+  $form['receiver'] = array(
+    '#type' => 'hidden',
+    '#value' => variable_get('yandex_receiver', ''),
+  );
+  $form['formcomment'] = array(
+    '#type' => 'hidden',
+    '#value' => variable_get('yandex_formcomment', ''),
+  );
+  $form['short-dest'] = array(
+    '#type' => 'hidden',
+    '#value' => t('Payments for order No') . $order->order_id,
+  );
+  $form['writable-targets'] = array(
+    '#type' => 'hidden',
+    '#value' => FALSE,
+  );
+  $form['comment-needed'] = array(
+    '#type' => 'hidden',
+    '#value' => FALSE,
+  );
+  $form['label'] = array(
+    '#type' => 'hidden',
+    '#value' => $order->order_id,
+  );
+  $form['targets'] = array(
+    '#type' => 'hidden',
+    '#value' => t('Payments for order No') . $order->order_id,
+  );
+  $form['sum'] = array(
+    '#type' => 'hidden',
+    '#value' => $amount,
+  );
+  $form['quickpay-form'] = array(
+    '#type' => 'hidden',
+    '#value' => 'shop',
+  );
+  $form['payment-type'] = array(
+    '#type' => 'hidden',
+    '#value' => $order->data['ya_commerce']['pay_method'],
+  );
+
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit order'),
+  );
+  return $form;    
+}
+
+function ya_commerce_get_shop_form($form, &$form_state, $order, $amount){
+  global $user;
+  if(variable_get('yandex_mode', 'test') == 'test') {
+    $form['#action'] = 'https://demomoney.yandex.ru/eshop.xml';  
+  }
+  else {
+    $form['#action'] = 'https://money.yandex.ru/eshop.xml';
+  }
+  
+  $form['shopId'] = array(
+    '#type' => 'hidden',
+    '#value' => variable_get('yandex_shop', ''),
+  );
+  $form['scid'] = array(
+    '#type' => 'hidden',
+    '#value' => variable_get('yandex_scid', ''),
+  );
+  $form['shop-desc'] = array(
+    '#type' => 'hidden',
+    '#value' => t('Payments for order No') . $order->order_id,
+  );
+  $form['orderId'] = array(
+    '#type' => 'hidden',
+    '#value' => $order->order_id,
+  );
+  $form['sum'] = array(
+    '#type' => 'hidden',
+    '#value' => $amount,
+  );
+  $form['CustomerNumber'] = array(
+    '#type' => 'hidden',
+    '#value' => $user->uid,
+  );
+  $form['orderId'] = array(
+    '#type' => 'hidden',
+    '#value' => $order->order_id,
+  );
+  $form['paymentType'] = array(
+    '#type' => 'hidden',
+    '#value' => $order->data['ya_commerce']['pay_method'],
+  );  
+  $form['cms_name'] = array(
+    '#type' => 'hidden',
+    '#value' => 'drupal',
+  );
+  $form['shopSuccessURL'] = array(
+    '#type' => 'hidden',
+    '#value' => 'https://yamoney.ardas.dp.ua/yamoney/temp',
+  );
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit order'),
+  );
+  return $form;
+}

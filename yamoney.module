@@ -1,0 +1,371 @@
+<?php
+/**
+ * Implements hook_permission().
+ */
+function yamoney_permission() {
+  return array(
+    'access yandex money transaction' => array(
+      'title' => t('Access YaMoney transaction'),
+      'description' => t('Display the yandex money transaction.'),
+    ),
+    'access own yandex money transaction' => array(
+      'title' => t('Access own YaMoney transaction'),
+      'description' => t('Display the yandex money transaction by own user.'),
+    ),
+    'access yamoney settings' => array(
+      'title' => t('Access YaMoney API'),
+      'description' => t('Access to Yandex Money API variables.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function yamoney_menu() {
+  $items = array();
+  //Secret transaction status url
+  $items['yamoney/check_order'] = array(
+    'page callback' => 'yamoney_check_order',
+    'access callback' => '_yamoney_check_server_ip',
+    'type' => MENU_CALLBACK,
+  );
+  $items['yamoney/check_payment'] = array(
+    'page callback' => 'yamoney_check_payment',
+    'access callback' => '_yamoney_check_server_ip',
+    'type' => MENU_CALLBACK,
+  );
+  // Congig page
+  $items['admin/config/yamoney'] = array(
+    'title' => 'Yandex settings.',
+    'description' => 'Yandex money base settings page.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('yamoney_admin_settings'),
+    'access arguments' => array('access yamoney settings'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'yamoney.admin.inc',
+  );
+  // Transactions page menu
+  $items['admin/config/yamoney/transaction'] = array(
+    'title' => 'All transactions',
+    'description' => 'Yandex money all transactions page.',
+    'page callback' => 'yamoney_transactions_page',
+    'access arguments' => array('access yandex money transaction'),
+    'type' => MENU_LOCAL_TASK,
+  );
+  //Acoount transaction table
+  $items['user/%user/yamoney_payments'] = array(
+    'title' => 'My transactions',
+    'description' => 'Yandex money user transactions page.',
+    'page callback' => 'yamoney_transactions_user_page',
+    'access arguments' => array('access yandex money transaction'),
+    'type' => MENU_LOCAL_TASK,    
+  );
+  // Account transaction complete page.
+  $items['yamoney/complete'] = array(
+    'page callback' => 'yamoney_complete_page',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['yamoney/fail'] = array(
+    'page callback' => 'yamoney_fail_page',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['yamoney/temp'] = array(
+    'page callback' => 'yamoney_temp_page',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function yamoney_complete_page(){
+  drupal_set_title(t('Congratulations!'));
+  $success = variable_get('yandex_success_text', '');
+  return $success['value']; 
+}
+
+function yamoney_fail_page(){
+  drupal_set_title(t('Sorry!'));
+  $fail = variable_get('yandex_fail_text', '');
+  return $fail['value']; 
+}
+
+function yamoney_temp_page(){
+  if(isset($_GET['action']) && $_GET['action'] == 'PaymentSuccess') { 
+    drupal_goto('yamoney/complete');
+  }
+  else {
+    drupal_goto('yamoney/fail');
+  }
+}
+
+function _yamoney_check_server_ip(){
+  $ip = '0.0.0.0';
+  if(variable_get('yamoney_server_ip', '0.0.0.0') == $ip) return TRUE;
+  return FALSE;
+}
+
+function yamoney_create_md5($params = array()){
+  if(!empty($params)) {
+    $output = '';
+    $output .= $params['action'];
+    $output .= ';'. $params['orderSumAmount'];
+    $output .= ';'. $params['orderSumCurrencyPaycash'];
+    $output .= ';'. $params['orderSumBankPaycash'];
+    $output .= ';'. $params['shopId'];
+    $output .= ';'. $params['invoiceId'];
+    $output .= ';'. $params['customerNumber'];
+    $md5 = md5($output .';'. variable_get('yandex_secret', ''));
+    return drupal_strtoupper($md5);
+  }
+  else {
+    return '';
+  }
+}
+
+function yamoney_check_order(){
+  if((!empty($_POST)) && ($_POST['md5'] == yamoney_create_md5($_POST))) {
+    $pay_params = yamoney_get_transaction(FALSE, FALSE, $_POST['orderId']);
+    $pay_params[0]->status = 'processed';
+    $pay_params[0]->data = unserialize($pay_params[0]->data);
+    yamoney_update_payment((array)$pay_params[0]);
+    print '<?xml version="1.0" encoding="UTF-8"?>';
+    print '<checkOrderResponse performedDatetime="'. $_POST['requestDatetime'] .'" code="0"'. ' invoiceId="'. $_POST['invoiceId'] .'" shopId="'. $_POST['shopId'] .'"/>';
+    exit;
+  }
+  else {
+    print '';
+    exit;
+  }
+}
+
+function yamoney_check_payment(){
+  if((!empty($_POST)) && ($_POST['md5'] == yamoney_create_md5($_POST))) {
+    $pay_params = yamoney_get_transaction(FALSE, FALSE, $_POST['orderId']);
+    $pay_params[0]->status = 'payed';
+    $pay_params[0]->data = unserialize($pay_params[0]->data);
+    yamoney_update_payment((array)$pay_params[0]);
+    if(module_exists('ya_commerce')){
+      $order = commerce_order_load($_POST['orderId']);
+      if($order){
+        commerce_order_status_update($order, 'checkout_complete');
+      }
+    }
+    if(module_exists('ya_ubercart')){
+      $order = uc_order_load($_POST['orderId']);
+      if($order){
+        //print_r($order);
+        uc_cart_complete_sale($order);
+        uc_cart_empty($order->uid);
+        uc_order_update_status($order->order_id, 'payment_received');
+      }
+    }
+    print '<?xml version="1.0" encoding="UTF-8"?>';
+    print '<paymentAvisoResponse performedDatetime="'. $_POST['requestDatetime'] .'" code="0" invoiceId="'. $_POST['invoiceId'] .'" shopId="'. $_POST['shopId'] .'"/>';
+    exit;
+  }
+  else {
+    print '';
+    exit;
+  }
+}
+
+/*
+ * Transaction operations.
+ * 
+ * params = array(
+ *   uid - user id
+ *   amount - trancaction summ
+ *   created - Unix time transaction
+ *   status - (in checkout, process, appruved)
+ *   mail - user mail
+ *   data - serialize data array
+ * );
+ * 
+ */
+function yamoney_set_transaction_status($params = array()){
+  // Set transaction status
+  db_update('yamoney_transaction')
+      ->fields(array('status' => $params['status']))
+      ->condition('ymid', $params['ymid'])
+      ->execute();
+}
+
+function yamoney_create_transaction($params = array()){
+  if(!empty($params)){
+    // Insert new data in table
+    $res = db_insert('yamoney_transaction')
+      ->fields(array(
+          'uid' => $params['uid'],
+          'amount' => $params['amount'],
+          'created' => $params['created'],
+          'status' => $params['status'],
+          'mail' => $params['mail'],
+          'order_id' => $params['order'],
+          'data' => serialize($params['data']),
+        ))
+      ->execute();
+  }
+  return $res;    
+}
+
+function yamoney_delete_payment($params = array()){
+  if(!empty($params)){
+    // Delete user payment transaction
+    db_delete('yamoney_transaction')
+      ->condition('ymid', $params['ymid'])
+      ->execute();
+  }
+}
+
+function yamoney_update_payment($params = array()){
+  if(!empty($params)){
+    // Insert new data in table
+    db_update('yamoney_transaction')
+      ->fields(array(
+          'ymid' => $params['ymid'],
+          'uid' => $params['uid'],
+          'amount' => $params['amount'],
+          'created' => $params['created'],
+          'status' => $params['status'],
+          'mail' => $params['mail'],
+          'order_id' => $params['order_id'],
+          'data' => serialize($params['data']),
+        ))
+      ->condition('ymid', $params['ymid'])
+      ->execute();
+  }  
+}
+
+
+/*
+ * Get transaction by params.
+ * $ymid - transaction id
+ * $uid - user id
+ * If not param, function return all values.
+ */
+function yamoney_get_transaction($ymid = FALSE, $uid = FALSE, $order_id = 0){
+  $transaction = '';
+  if(!$ymid && !$uid && !$order_id) {
+    $transaction_tmp = db_select('yamoney_transaction', 'yt')
+    ->fields('yt')
+    ->extend('PagerDefault') // this adds the pager
+    ->limit(20);
+    $transaction = $transaction_tmp->execute()->fetchAll();
+  }
+  elseif(!$ymid && $uid){
+    $transaction_tmp = db_select('yamoney_transaction', 'yt')
+    ->fields('yt')
+    ->condition('yt.uid', $uid)
+    ->extend('PagerDefault') // this adds the pager
+    ->limit(20);
+    $transaction = $transaction_tmp->execute()->fetchAll();    
+  }
+  elseif($ymid) {
+    $transaction = db_select('yamoney_transaction', 'yt')
+    ->fields('yt')
+    ->condition('yt.ymid', $ymid)
+    ->execute()
+    ->fetchAll();
+  }
+  if($order_id) {
+    $transaction = db_select('yamoney_transaction', 'yt')
+    ->fields('yt')
+    ->condition('yt.order_id', $order_id)
+    ->execute()
+    ->fetchAll();      
+  }
+  return $transaction;
+}
+
+function yamoney_transactions_page(){
+  $transaction = yamoney_get_transaction();
+  if(!empty($transaction)) $table = yamoney_create_transaction_table($transaction);
+  $output = drupal_render($table);
+  drupal_set_title(t('Transactions'));
+  return $output;
+}
+
+function yamoney_create_transaction_table($table_rows = array()){
+  $rows = array();
+  if(count($table_rows) > 0) {
+    foreach($table_rows as $item) {
+      $rows[] = yamoney_transaction_build_payment_row((array)$item);
+    }
+    $header = array(t('Id'), t('Name'), t('Amount'), t('Date/Time'), t('Status'), t('E-mail'), t('Order ID'));
+    $table['table_rows'] = array(
+      '#theme' => 'table',
+      '#rows' => $rows,
+      '#header' => $header,
+    );
+  
+    $table['pager'] = array(
+      '#theme' => 'pager',
+      '#weight' => 5,
+    );
+  }
+  else {
+    $table = t('There no transactions.');
+  }
+  return $table;
+}
+
+function yamoney_transaction_build_payment_row($row = array()){
+  if(is_array($row)){
+    unset($row['data']);
+    foreach($row as $key => $item){
+      if($key == 'uid') {
+        if($item){
+          $user = user_load($item);
+          $item = $user->name;
+        }
+        else {
+          $item = 'guest';
+        }
+      }
+      if($key == 'created'){
+        $item = format_date($item, 'custom', 'd-m-Y H:i:s');
+      }
+      if($key == 'amount') {
+        $item = $item .' RUR';
+      }
+      $row[$key] = $item;
+    }
+  }
+  return $row;
+}
+
+function yamoney_transactions_user_page(){
+  if(is_numeric(arg(1)) && arg(2) == 'yamoney_payments')
+  $transaction = yamoney_get_transaction(FALSE, arg(1));
+  if(!empty($transaction)) $table = yamoney_create_transaction_table($transaction);
+  $output = drupal_render($table);
+  drupal_set_title(t('My YaMoney transactions'));
+  return $output;
+}
+
+function yamoney_get_payments(){
+  if(variable_get('yandex_payments_pc', 1)) {
+    $payments['PC'] = t('Yandex money');
+  }
+  if(variable_get('yandex_payments_ac', 1)) {
+    $payments['AC'] = t('Credit card');    
+  }
+  if(variable_get('yandex_payments_gp', 1)) {
+    $payments['GP'] = t('Pay terminal');
+  }
+  if(variable_get('yandex_payments_mc', 1)) {
+    $payments['MC'] = t('Mobile phone');
+  }
+  if(variable_get('yandex_payments_wm', 1)) {
+    $payments['WM'] = t('WebMoney');
+  }  
+  foreach ($payments as $key => $item){
+    if(!$item) {
+      unset($payments[$key]);
+    }
+  }
+  return $payments;
+}

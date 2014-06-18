@@ -1,0 +1,72 @@
+<?php
+/**
+ * Implements hook_schema().
+ */
+function yamoney_schema() {
+  $schema['yamoney_transaction'] = array(
+  'description' => 'Yandex money transactions table.',
+    'fields' => array(
+      'ymid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => "The transaction id.",
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "Transaction user id ",
+      ),
+      'amount' => array(
+        'type' => 'float',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'Transaction amount.',
+      ),
+      'created' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The Unix timestamp when the transaction was created.',
+      ),
+      'status' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => "The transaction status.",
+      ),
+      'mail' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => "The transaction user e-mail.",
+      ),
+      'order' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "Order id ",
+      ),
+      'data' => array(
+        'type' => 'blob',
+        'not null' => TRUE,
+        'size' => 'big',
+        'description' => 'Serialized array of additional trasaction information.',
+      ),
+    ),
+    'primary key' => array('ymid'),
+    'indexes' => array(
+      'uid' => array('uid'),
+      'created' => array('created'),
+    ),
+  );
+  return $schema;
+}
+
+function book_uninstall() {
+
+}
