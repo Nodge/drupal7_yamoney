@@ -181,6 +181,10 @@ function ya_commerce_get_shop_form($form, &$form_state, $order, $amount){
     '#type' => 'hidden',
     '#value' => $order->data['ya_commerce']['pay_method'],
   );
+  $form['cms_name'] = array(
+    '#type' => 'hidden',
+    '#value' => 'drupal',
+  );
   $form['shopSuccessURL'] = array(
     '#type' => 'hidden',
     '#value' => $proto . $_SERVER['SERVER_NAME'] .'/yamoney/temp',
