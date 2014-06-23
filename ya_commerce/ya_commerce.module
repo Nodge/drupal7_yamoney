@@ -175,17 +175,9 @@ function ya_commerce_get_shop_form($form, &$form_state, $order, $amount){
     '#type' => 'hidden',
     '#value' => $user->uid,
   );
-  $form['orderId'] = array(
-    '#type' => 'hidden',
-    '#value' => $order->order_id,
-  );
   $form['paymentType'] = array(
     '#type' => 'hidden',
     '#value' => $order->data['ya_commerce']['pay_method'],
-  );  
-  $form['cms_name'] = array(
-    '#type' => 'hidden',
-    '#value' => 'drupal',
   );
   $form['shopSuccessURL'] = array(
     '#type' => 'hidden',

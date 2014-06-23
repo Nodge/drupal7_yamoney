@@ -44,7 +44,7 @@ function yamoney_schema() {
         'default' => '',
         'description' => "The transaction user e-mail.",
       ),
-      'order' => array(
+      'order_id' => array(
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
