@@ -144,6 +144,8 @@ function ya_commerce_get_quick_form($form, &$form_state, $order, $amount){
 
 function ya_commerce_get_shop_form($form, &$form_state, $order, $amount){
   global $user;
+  $proto = $_SERVER['HTTPS'] ? 'https://' : 'http://';
+  
   if(variable_get('yandex_mode', 'test') == 'test') {
     $form['#action'] = 'https://demomoney.yandex.ru/eshop.xml';  
   }
@@ -179,13 +181,9 @@ function ya_commerce_get_shop_form($form, &$form_state, $order, $amount){
     '#type' => 'hidden',
     '#value' => $order->data['ya_commerce']['pay_method'],
   );
-  $form['cms_name'] = array(
-    '#type' => 'hidden',
-    '#value' => 'drupal',
-  );
   $form['shopSuccessURL'] = array(
     '#type' => 'hidden',
-    '#value' => 'https://yamoney.ardas.dp.ua/yamoney/temp',
+    '#value' => $proto . $_SERVER['SERVER_NAME'] .'/yamoney/temp',
   );
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(

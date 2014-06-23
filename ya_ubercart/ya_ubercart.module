@@ -35,6 +35,7 @@ function ya_ubercart_uc_payment_method() {
 
 function ya_ubercart_form($form, &$form_state, $order){
   global $user;
+  $proto = $_SERVER['HTTPS'] ? 'https://' : 'http://';
   $form = array();
   if(variable_get('yandex_user_status', 0)){
     if(variable_get('yandex_mode', 'test') == 'test') {
@@ -71,13 +72,9 @@ function ya_ubercart_form($form, &$form_state, $order){
       '#type' => 'hidden',
       '#value' => $_SESSION['pay_method'],
     );
-    $form['cms_name'] = array(
-      '#type' => 'hidden',
-      '#value' => 'drupal',
-    );
     $form['shopSuccessURL'] = array(
       '#type' => 'hidden',
-      '#value' => 'https://yamoney.ardas.dp.ua/yamoney/temp',
+      '#value' => $proto . $_SERVER['SERVER_NAME'] .'/yamoney/temp',
     );
     $form['actions'] = array('#type' => 'actions');
     $form['actions']['submit'] = array(
