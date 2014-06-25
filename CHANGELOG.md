@@ -19,7 +19,3 @@
 * Added option to select default payment method
 * Added `hook_yamoney_order_submission_params_alter()`, `hook_yamoney_shop_params_alter()` and `hook_yamoney_quick_params_alter()` to define custom arguments for order submission request
 * Removed Drupal Commerce and Ubercart code from core API module
-
-
-yamoney_shop_params
-yamoney_quick_params
