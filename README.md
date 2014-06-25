@@ -15,3 +15,5 @@ Note: Only Drupal Commerce is working now.
 
 * Readme
 * Log errors and payments to watchdog
+* Fix Ubercart integration
+* Fix Donate module
