@@ -37,8 +37,8 @@ function ya_ubercart_form($form, &$form_state, $order){
   global $user;
   $proto = $_SERVER['HTTPS'] ? 'https://' : 'http://';
   $form = array();
-  if(variable_get('yandex_user_status', 0)){
-    if(variable_get('yandex_mode', 'test') == 'test') {
+  if(variable_get('yamoney_shop', 0)){
+    if(variable_get('yamoney_mode', 'test') == 'test') {
       $form['#action'] = 'https://demomoney.yandex.ru/eshop.xml';  
     }
     else {
@@ -46,11 +46,11 @@ function ya_ubercart_form($form, &$form_state, $order){
     }
     $form['shopId'] = array(
       '#type' => 'hidden',
-      '#value' => variable_get('yandex_shop', ''),
+      '#value' => variable_get('yamoney_shop_id', ''),
     );
     $form['scid'] = array(
       '#type' => 'hidden',
-      '#value' => variable_get('yandex_scid', ''),
+      '#value' => variable_get('yamoney_scid', ''),
     );
     $form['shop-desc'] = array(
       '#type' => 'hidden',
@@ -95,11 +95,11 @@ function ya_ubercart_form($form, &$form_state, $order){
     }
     $form['receiver'] = array(
       '#type' => 'hidden',
-      '#value' => variable_get('yandex_receiver', ''),
+      '#value' => variable_get('yamoney_receiver', ''),
     );
     $form['formcomment'] = array(
       '#type' => 'hidden',
-      '#value' => variable_get('yandex_formcomment', ''),
+      '#value' => variable_get('yamoney_formcomment', ''),
     );
     $form['short-dest'] = array(
       '#type' => 'hidden',
@@ -193,3 +193,16 @@ function uc_payment_method_ya_ubercart($op, &$order, $form = NULL, &$form_state 
       return $form;
   }
 }
+
+
+/*
+ * if (module_exists('ya_ubercart')) {
+    $order = uc_order_load($_POST['orderId']);
+    if ($order) {
+      //print_r($order);
+      uc_cart_complete_sale($order);
+      uc_cart_empty($order->uid);
+      uc_order_update_status($order->order_id, 'payment_received');
+    }
+  }
+ */

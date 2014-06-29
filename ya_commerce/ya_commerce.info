@@ -1,7 +1,8 @@
 name = Yandex Commerce
-description = "Yandex money module for Drupal Commerce."
-package = Yandex Money
+description = "Yandex.Money module for Drupal Commerce."
+package = Yandex.Money
 core = 7.x
+configure = admin/config/system/yamoney
 dependencies[] = yamoney
 dependencies[] = commerce
 dependencies[] = commerce_payment

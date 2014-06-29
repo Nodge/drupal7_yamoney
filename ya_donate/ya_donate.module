@@ -80,7 +80,7 @@ function ya_donate_block_view($delta) {
 
 function ya_donate_block_form(){
   $form = array();
-  if(variable_get('yandex_mode', 'test') == 'live') {
+  if(variable_get('yamoney_mode', 'test') == 'live') {
     $form['#action'] = 'https://money.yandex.ru/quickpay/confirm.xml';
   }
   else {
@@ -103,10 +103,10 @@ function ya_donate_block_form(){
       '#size' => 20,
     );    
   }
-  if(variable_get('yandex_receiver', '')) {
+  if(variable_get('yamoney_receiver', '')) {
     $form['receiver'] = array(
       '#type' => 'hidden',
-      '#value' => variable_get('yandex_receiver', ''),
+      '#value' => variable_get('yamoney_receiver', ''),
     );
   }
   $form['quickpay-form'] = array(

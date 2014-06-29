@@ -1,113 +1,119 @@
 <?php
 
-function yamoney_admin_settings(){
+/**
+ * @return array
+ */
+function yamoney_admin_settings() {
   $form = array();
-  $form['yandex_all'] = array(
+
+  // General settings
+  $form['yamoney_all'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Base parameters'),
+    '#title' => t('Base options'),
   );
-  $form['yandex_all']['yandex_ip'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Insert server IP'),
-    '#default_value' => variable_get('yandex_ip', '0.0.0.0'),
+  $form['yamoney_all']['yamoney_ip'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Allowed IPs for callbacks'),
+    '#default_value' => variable_get('yamoney_ip', '0.0.0.0'),
+    '#description' => t('The list of IP addresses which has access to payment callbacks. One per line.<br/>0.0.0.0 means allow from all.')
   );
-  $form['yandex_all']['yandex_mode'] = array(
+  $form['yamoney_all']['yamoney_mode'] = array(
     '#type' => 'select',
-    '#title' => t('Select payment mode'),
-    '#options' => array('test' => t('Test mode'), 'live' => t('Live mode')),
-    '#default_value' => variable_get('yandex_mode', 'test'),
+    '#title' => t('Payment mode'),
+    '#options' => array(
+      'test' => t('Test mode'),
+      'live' => t('Live mode')
+    ),
+    '#default_value' => variable_get('yamoney_mode', 'test'),
   );
-  $form['yandex_all']['currency'] = array(
-    '#markup' => '<b>'. t('Select the types of payments online') .'</b>',
+
+  $form['yamoney_all']['yamoney_payment_method'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled payment methods'),
+    '#options' => yamoney_get_payment_methods(),
+    '#default_value' => variable_get('yamoney_payment_method', array_keys(yamoney_get_payment_methods())),
   );
-  $form['yandex_all']['yandex_payments_pc'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Yandex money'),
-    '#default_value' => variable_get('yandex_payments_pc', 1),
+
+  $form['yamoney_all']['yamoney_default_payment_method'] = array(
+    '#type' => 'radios',
+    '#title' => t('Default payment method'),
+    '#options' => yamoney_get_payment_methods(),
+    '#default_value' => variable_get('yamoney_default_payment_method', YAMONEY_DEFAULT_PAYMENT_METHOD),
   );
-  $form['yandex_all']['yandex_payments_ac'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Credit card'),
-    '#default_value' => variable_get('yandex_payments_ac', 1),
+
+  // Shop settings
+  $shop_states = array(
+    // Hide the settings when the Yandex shop checkbox is disabled.
+    'invisible' => array(
+      ':input[name="yamoney_shop"]' => array('checked' => FALSE),
+    ),
   );
-  $form['yandex_all']['yandex_payments_gp'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Cash or terminal'),
-    '#default_value' => variable_get('yandex_payments_gp', 1),
-  );
-  $form['yandex_all']['yandex_payments_mc'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Mobile phone'),
-    '#default_value' => variable_get('yandex_payments_mc', 1),
-  );
-  $form['yandex_all']['yandex_payments_wm'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('WebMoney'),
-    '#default_value' => variable_get('yandex_payments_wm', 1),
-  );
-  $form['yandex_shop_setting'] = array(
+  $form['yamoney_shop_setting'] = array(
     '#type' => 'fieldset',
     '#title' => t('Yandex shop settings'),
   );
-  $form['yandex_shop_setting']['yandex_user_status'] = array(
+  $form['yamoney_shop_setting']['yamoney_shop'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Select if you have a shop in Yandex'),
-    '#description' => t('Select this checkbox only you have a shop in yandex money service.'),
-    '#default_value' => variable_get('yandex_user_status', 0),
-  );  
-  $form['yandex_shop_setting']['yandex_shop'] = array(
+    '#title' => t('Select if you have a shop in Yandex.Money'),
+    '#default_value' => variable_get('yamoney_shop', 0),
+  );
+  $form['yamoney_shop_setting']['yamoney_shop_id'] = array(
     '#type' => 'textfield',
-    '#title' => t('Shop ID.'),
-    '#description' => t('You shop ID. If you have any shops in you yandex account'),
-    '#default_value' => variable_get('yandex_shop', ''),
+    '#title' => t('Shop ID'),
+    '#description' => t('You shop ID. If you have any shops in you Yandex account.'),
+    '#default_value' => variable_get('yamoney_shop_id', ''),
     '#size' => 2,
+    '#states' => $shop_states,
   );
-  $form['yandex_shop_setting']['yandex_scid'] = array(
+  $form['yamoney_shop_setting']['yamoney_scid'] = array(
     '#type' => 'textfield',
-    '#title' => t('Enter Scid'),
-    '#default_value' => variable_get('yandex_scid', ''),
+    '#title' => t('Shop SCID'),
+    '#default_value' => variable_get('yamoney_scid', ''),
     '#size' => 5,
+    '#states' => $shop_states,
   );
-  $form['yandex_shop_setting']['yandex_secret'] = array(
+  $form['yamoney_shop_setting']['yamoney_secret'] = array(
     '#type' => 'textfield',
-    '#title' => t('Shop security key.'),
-    '#description' => t('You shop password security key. Not you payment password'),
-    '#default_value' => variable_get('yandex_secret', ''),
+    '#title' => t('Shop security key'),
+    '#description' => t('You shop password security key. Not you payment password.'),
+    '#default_value' => variable_get('yamoney_secret', ''),
     '#size' => 17,
+    '#states' => $shop_states,
   );
 
-  $form['yandex_purse_setting'] = array(
+  // Purse settings
+  $form['yamoney_purse_setting'] = array(
     '#type' => 'fieldset',
     '#title' => t('Yandex purse settings'),
   );
-  $form['yandex_purse_setting']['yandex_receiver'] = array(
+  $form['yamoney_purse_setting']['yamoney_receiver'] = array(
     '#type' => 'textfield',
     '#title' => t('Purse number'),
-    '#description' => t('Your yandex money purse number.'),
-    '#default_value' => variable_get('yandex_receiver', ''),
+    '#description' => t('Your Yandex.Money purse number.'),
+    '#default_value' => variable_get('yamoney_receiver', ''),
     '#size' => 14,
-  );    
-  
-  $form['yandex_purse_setting']['yandex_formcomment'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Pay comment.'),
-    '#description' => t('Your yandex money pay comment.'),
-    '#default_value' => variable_get('yandex_formcomment', ''),
   );
-  
-  $form['yandex_texts'] = array(
+
+  $form['yamoney_purse_setting']['yamoney_formcomment'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pay comment'),
+    '#description' => t('Your Yandex.Money pay comment.'),
+    '#default_value' => variable_get('yamoney_formcomment', ''),
+  );
+
+  $form['yamoney_texts'] = array(
     '#type' => 'fieldset',
     '#title' => t('Text for success and fail payment pages'),
   );
-  $success = variable_get('yandex_success_text', '');
-  $form['yandex_texts']['yandex_success_text'] = array(
+  $success = variable_get('yamoney_success_text', '');
+  $form['yamoney_texts']['yamoney_success_text'] = array(
     '#type' => 'text_format',
     '#title' => t('Text for success page'),
     '#default_value' => $success['value'] ? $success['value'] : '',
     '#format' => $success['format'] ? $success['format'] : '',
   );
-  $fail = variable_get('yandex_fail_text', '');
-  $form['yandex_texts']['yandex_fail_text'] = array(
+  $fail = variable_get('yamoney_fail_text', '');
+  $form['yamoney_texts']['yamoney_fail_text'] = array(
     '#type' => 'text_format',
     '#title' => t('Text for fail page'),
     '#default_value' => $fail['value'] ? $fail['value'] : '',
@@ -116,23 +122,27 @@ function yamoney_admin_settings(){
   return system_settings_form($form);
 }
 
-function yamoney_admin_settings_validate($form, &$form_state){
-  if(!$form_state['values']['yandex_payments_pc'] && !$form_state['values']['yandex_payments_ac'] && !$form_state['values']['yandex_payments_gp'] && !$form_state['values']['yandex_payments_mc']) {
-    form_set_error('yandex_payments_pc');
-    form_set_error('yandex_payments_ac');
-    form_set_error('yandex_payments_gp');
-    form_set_error('yandex_payments_mc', t('You do not choose the type of payment online!'));
+/**
+ * @param array $form
+ * @param array $form_state
+ */
+function yamoney_admin_settings_validate($form, &$form_state) {
+  if (!$form_state['values']['yamoney_payment_method']) {
+    form_set_error('yamoney_payment_method', t('You do not choose the type of payment online!'));
   }
-  if($form_state['values']['yandex_ip']) {
-    $check_ip = explode('.', $form_state['values']['yandex_ip']);
-    foreach($check_ip as $item) {
-      if(!is_numeric($item) || count($check_ip) > 4 || $item > 999) {
-        form_set_error('yandex_ip', t('IP is not correct. Please insert correct server IP or insert 0.0.0.0 to default!'));
-        break;
+
+  if ($form_state['values']['yamoney_ip']) {
+    $ips = explode("\n", $form_state['values']['yamoney_ip']);
+    foreach ($ips as $ip) {
+      $ip = trim($ip);
+      if (empty($ip)) {
+        continue;
+      }
+      if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+        form_set_error('yamoney_ip', t('IP is not correct: %ip.<br/>Please insert correct server IP or insert 0.0.0.0 to default!', array(
+          '%ip' => $ip,
+        )));
       }
     }
-  }
-  else {
-    form_set_error('yandex_ip', t('IP is empty. Please insert yandex server IP or insert 0.0.0.0 to default!'));
   }
 }
