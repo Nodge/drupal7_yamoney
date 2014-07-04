@@ -1,5 +1,6 @@
 
 ### 04.07.2014
+* Fixed payments by anonymous users
 * Fixed transaction.inc loading bugs
 * Cleanup variables on uninstall
 * Fixed "No transactions" message markup
