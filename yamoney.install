@@ -67,6 +67,30 @@ function yamoney_schema() {
   return $schema;
 }
 
-function book_uninstall() {
+/**
+ *
+ */
+function yamoney_uninstall() {
+  $variables = array(
+    'yamoney_ip',
+    'yamoney_mode',
+    'yamoney_payment_method',
+    'yamoney_default_payment_method',
+    'yamoney_shop',
+    'yamoney_shop_id',
+    'yamoney_scid',
+    'yamoney_secret',
+    'yamoney_receiver',
+    'yamoney_formcomment',
+    'yamoney_success_text',
+    'yamoney_fail_text',
+    '',
+    '',
+    '',
+    '',
+  );
 
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
 }

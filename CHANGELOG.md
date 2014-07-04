@@ -1,4 +1,7 @@
 
+### 04.07.2014
+* Cleanup variables on uninstall
+
 ### 25.06.2014
 * Refactor `yamoney` and `ya_commerce` modules
 * Fixed `ya_commerce` to work with Commerce Payment module instead of Commerce Order (now fully integrated with standard checkout process)
