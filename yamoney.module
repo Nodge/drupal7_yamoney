@@ -8,9 +8,9 @@ define('YAMONEY_CHECK_RESULT_CODE_ERROR_REQUEST', 200);
 define('YAMONEY_DEFAULT_PAYMENT_METHOD', 'PC');
 
 /**
- * Implements hook_boot().
+ * Implements hook_init().
  */
-function yamoney_boot() {
+function yamoney_init() {
   module_load_include('inc', 'yamoney', 'transactions');
 }
 
@@ -70,6 +70,7 @@ function yamoney_menu() {
     'page callback' => 'yamoney_transactions_page',
     'access arguments' => array('access yandex money transaction'),
     'type' => MENU_NORMAL_ITEM,
+    'file' => 'transactions.inc',
   );
 
   // Account transaction table
@@ -80,6 +81,7 @@ function yamoney_menu() {
     'page arguments' => array(1),
     'access arguments' => array('access own yandex money transaction'),
     'type' => MENU_LOCAL_TASK,
+    'file' => 'transactions.inc',
   );
 
   // Transaction callbacks

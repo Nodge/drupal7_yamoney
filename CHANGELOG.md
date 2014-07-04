@@ -1,5 +1,6 @@
 
 ### 04.07.2014
+* Fixed transaction.inc loading bugs
 * Cleanup variables on uninstall
 
 ### 25.06.2014
