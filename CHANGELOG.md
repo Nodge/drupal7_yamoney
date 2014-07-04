@@ -2,6 +2,7 @@
 ### 04.07.2014
 * Fixed transaction.inc loading bugs
 * Cleanup variables on uninstall
+* Fixed "No transactions" message markup
 
 ### 25.06.2014
 * Refactor `yamoney` and `ya_commerce` modules

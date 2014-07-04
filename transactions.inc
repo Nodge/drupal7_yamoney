@@ -188,7 +188,10 @@ function yamoney_create_transaction_table($table_rows) {
     );
   }
   else {
-    $table = t('There no transactions.');
+    $table = array(
+      '#type' => 'markup',
+      '#markup' => t('There no transactions.'),
+    );
   }
   return $table;
 }
