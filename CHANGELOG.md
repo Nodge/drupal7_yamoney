@@ -3,6 +3,7 @@
 * Fixed transaction.inc loading bugs
 * Cleanup variables on uninstall
 * Fixed "No transactions" message markup
+* Update Ubercart integration module
 
 ### 25.06.2014
 * Refactor `yamoney` and `ya_commerce` modules

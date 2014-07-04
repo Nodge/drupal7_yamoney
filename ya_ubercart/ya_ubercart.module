@@ -1,11 +1,4 @@
 <?php
-/**
- * Implements hook_menu().
- */
-function ya_ubercart_menu() {
-  $items = array();
-  return $items;
-}
 
 /**
  * Implements hook_uc_payment_method().
@@ -13,168 +6,117 @@ function ya_ubercart_menu() {
  * @see uc_payment_method_yamoney()
  */
 function ya_ubercart_uc_payment_method() {
-  $path = base_path() . drupal_get_path('module', 'ya_ubercart');
-  $title = variable_get('ya_ubercart_method_title', t('Yandex money payments:'));
-  $title .= '<br />' . theme('image', array(
+  $payment_methods = array();
+
+  $icon = theme('image', array(
     'path' => drupal_get_path('module', 'ya_ubercart') . '/images/yandex-logo.png',
     'attributes' => array('class' => array('ya-ubercart-logo')),
   ));
+  $display_title = t('Yandex.Money payments:') . '<br/>' . $icon;
 
-  $methods['ya_ubercart'] = array(
+  $payment_methods['ya_ubercart'] = array(
     'name' => t('Yandex money'),
-    'title' => $title,
+    'title' => $display_title,
     'review' => t('Yandex gateway'),
     'desc' => t('Redirect to Yandex to pay by credit card or pay terminals or e-money.'),
     'callback' => 'uc_payment_method_ya_ubercart',
     'redirect' => 'ya_ubercart_form',
     'weight' => 3,
-    'checkout' => TRUE, 
+    'checkout' => TRUE,
   );
-  return $methods;
+
+  return $payment_methods;
 }
 
-function ya_ubercart_form($form, &$form_state, $order){
+/**
+ * @param array $form
+ * @param array $form_state
+ * @param $order
+ * @return array
+ */
+function ya_ubercart_form($form, &$form_state, $order) {
   global $user;
-  $proto = $_SERVER['HTTPS'] ? 'https://' : 'http://';
+
+  $transaction = new YAMoneyTransaction();
+  $transaction->uid = $user->uid;
+  $transaction->amount = $order->order_total;
+  $transaction->mail = $user->mail ? $user->mail : $order->primary_email;
+  $transaction->order_id = $order->order_id;
+  if (!yamoney_transaction_save($transaction)) {
+    $error_message = t('Can not save transaction.');
+
+    // show message to the user
+    drupal_set_message(t('Payment failed: %message', array('%message' => $error_message)), 'error');
+
+    // log error to watchdog
+    watchdog('ya_ubercart', 'Payment failed: %message', array('%message' => $error_message), WATCHDOG_WARNING);
+
+    // redirect to fail page
+    $cancel_url = url('yamoney/fail');
+    drupal_goto($cancel_url);
+  }
+
+  $target_url = yamoney_get_order_submission_url();
+  $params = yamoney_get_order_submission_params($transaction);
+
   $form = array();
-  if(variable_get('yamoney_shop', 0)){
-    if(variable_get('yamoney_mode', 'test') == 'test') {
-      $form['#action'] = 'https://demomoney.yandex.ru/eshop.xml';  
-    }
-    else {
-      $form['#action'] = 'https://money.yandex.ru/eshop.xml';
-    }
-    $form['shopId'] = array(
+  $form['#action'] = $target_url;
+  foreach ($params as $key => $value) {
+    $form[$key] = array(
       '#type' => 'hidden',
-      '#value' => variable_get('yamoney_shop_id', ''),
-    );
-    $form['scid'] = array(
-      '#type' => 'hidden',
-      '#value' => variable_get('yamoney_scid', ''),
-    );
-    $form['shop-desc'] = array(
-      '#type' => 'hidden',
-      '#value' => t('Payments for order No') . $order->order_id,
-    );
-    $form['orderId'] = array(
-      '#type' => 'hidden',
-      '#value' => $order->order_id,
-    );
-    $form['sum'] = array(
-      '#type' => 'hidden',
-      '#value' => $order->order_total,
-    );
-    $form['CustomerNumber'] = array(
-      '#type' => 'hidden',
-      '#value' => $user->uid,
-    );
-    $form['paymentType'] = array(
-      '#type' => 'hidden',
-      '#value' => $_SESSION['pay_method'],
-    );
-    $form['shopSuccessURL'] = array(
-      '#type' => 'hidden',
-      '#value' => $proto . $_SERVER['SERVER_NAME'] .'/yamoney/temp',
-    );
-    $form['cms_name'] = array(
-      '#type' => 'hidden',
-      '#value' => 'drupal',
-    );
-    $form['actions'] = array('#type' => 'actions');
-    $form['actions']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Submit order'),
+      '#value' => $value,
     );
   }
-  else {
-    if(variable_get('ya_ubercart_mode', 'test') == 'test') {
-      $form['#action'] = 'https://demomoney.yandex.ru/quickpay/confirm.xml';  
-    }
-    else {
-      $form['#action'] = 'https://money.yandex.ru/quickpay/confirm.xml';
-    }
-    $form['receiver'] = array(
-      '#type' => 'hidden',
-      '#value' => variable_get('yamoney_receiver', ''),
-    );
-    $form['formcomment'] = array(
-      '#type' => 'hidden',
-      '#value' => variable_get('yamoney_formcomment', ''),
-    );
-    $form['short-dest'] = array(
-      '#type' => 'hidden',
-      '#value' => t('Payments for order No') . $order->order_id,
-    );
-    $form['writable-targets'] = array(
-      '#type' => 'hidden',
-      '#value' => FALSE,
-    );
-    $form['comment-needed'] = array(
-      '#type' => 'hidden',
-      '#value' => FALSE,
-    );
-    $form['label'] = array(
-      '#type' => 'hidden',
-      '#value' => $order->order_id,
-    );
-    $form['targets'] = array(
-      '#type' => 'hidden',
-      '#value' => t('Payments for order No') . $order->order_id,
-    );
-    $form['sum'] = array(
-      '#type' => 'hidden',
-      '#value' => $order->order_total,
-    );
-    $form['quickpay-form'] = array(
-      '#type' => 'hidden',
-      '#value' => 'shop',
-    );
-    $form['payment-type'] = array(
-      '#type' => 'hidden',
-      '#value' => $_SESSION['pay_method'],
-    );
-    $form['actions'] = array('#type' => 'actions');
-    $form['actions']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Submit order'),
-    );
-  }
-  $pay_params = yamoney_get_transaction(FALSE, FALSE, $order->order_id);
-  if(!empty($pay_params)) {
-    $pay_params[0]->status = 'in checkout';
-    $pay_params[0]->data = unserialize($pay_params[0]->data);
-    yamoney_update_payment((array)$pay_params[0]);
-  }
-  else {
-    $pay_params = array(
-      'uid' => $user->uid,
-      'amount' => $order->order_total,
-      'created' => time(),
-      'status' => 'in checkout',
-      'mail' => $user->mail ? $user->mail : $order->primary_email,
-      'order' => $order->order_id,
-      'data' => array(),
-    );
-    yamoney_create_transaction($pay_params);
-  }
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit order'),
+  );
+
   return $form;
 }
 
-function uc_payment_method_ya_ubercart($op, &$order, $form = NULL, &$form_state = NULL){
+/**
+ * Implements hook_yamoney_shop_params_alter().
+ * @param $params
+ */
+function ya_ubercart_yamoney_shop_params_alter(&$params) {
+  // Selected payment method
+  $params['paymentType'] = $_SESSION['pay_method'];
+  $params['shop-desc'] = t('Payments for order No') . $params['order_id'];
+}
+
+/**
+ * Implements hook_yamoney_quick_params_alter().
+ * @param $params
+ */
+function ya_ubercart_yamoney_quick_params_alter(&$params) {
+  // Selected payment method
+  $params['payment-type'] = $_SESSION['pay_method'];
+}
+
+/**
+ * @param $op
+ * @param $order
+ * @param null $form
+ * @param null $form_state
+ * @return array|null
+ */
+function uc_payment_method_ya_ubercart($op, &$order, $form = NULL, &$form_state = NULL) {
   switch ($op) {
     case 'cart-details':
       $build = array();
       $disabled = FALSE;
-      $payment = yamoney_get_payments();
-      if(count($payment) == 1) {
+      $methods = yamoney_get_enabled_payment_methods();
+      if (count($methods) === 1) {
         $disabled = TRUE;
       }
-      if(variable_get('ya_payments_select', 1)) {
+      if (variable_get('ya_payments_select', 1)) {
         $build['pay_method'] = array(
           '#type' => 'select',
           '#title' => t('Select your payment type:'),
-          '#default_value' => isset($_SESSION['pay_method']) ? $_SESSION['pay_method'] : 'PC',
-          '#options' => $payment,
+          '#default_value' => isset($_SESSION['pay_method']) ? $_SESSION['pay_method'] : variable_get('yamoney_default_payment_method', YAMONEY_DEFAULT_PAYMENT_METHOD),
+          '#options' => $methods,
           '#disabled' => $disabled,
         );
       }
@@ -194,15 +136,24 @@ function uc_payment_method_ya_ubercart($op, &$order, $form = NULL, &$form_state 
   }
 }
 
-
-/*
- * if (module_exists('ya_ubercart')) {
-    $order = uc_order_load($_POST['orderId']);
-    if ($order) {
-      //print_r($order);
-      uc_cart_complete_sale($order);
-      uc_cart_empty($order->uid);
-      uc_order_update_status($order->order_id, 'payment_received');
-    }
-  }
+/**
+ * Process successful payment to update Ubercart order.
+ * Implements hook_yamoney_process_payment_alter().
+ * @param array $payment
  */
+function ya_ubercart_yamoney_process_payment_alter(&$payment) {
+  /** @var YAMoneyTransaction $transaction */
+  $transaction = $payment['transaction'];
+  $order = uc_order_load($transaction->order_id);
+  if ($order) {
+    //print_r($order);
+    uc_cart_complete_sale($order);
+    uc_cart_empty($order->uid);
+    uc_order_update_status($order->order_id, 'payment_received');
+    $payment['success'] = TRUE;
+  }
+  else {
+    $payment['success'] = FALSE;
+    $payment['error'] = 'Can not find order with id ' . $transaction->order_id;
+  }
+}

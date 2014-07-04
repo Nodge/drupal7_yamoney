@@ -1,6 +1,6 @@
 name = Yandex Ubercart
-description = "Yandex money module for Ubercart."
-package = Yandex Money
+description = "Yandex.Money module for Ubercart."
+package = Yandex.Money
 core = 7.x
 dependencies[] = yamoney
 dependencies[] = uc_payment

@@ -6,7 +6,10 @@
 function ya_commerce_commerce_payment_method_info() {
   $payment_methods = array();
 
-  $icon = '<img src="/' . drupal_get_path('module', 'ya_commerce') . '/images/yandex-logo.png">';
+  $icon = theme('image', array(
+    'path' => drupal_get_path('module', 'ya_commerce') . '/images/yandex-logo.png',
+    'attributes' => array('class' => array('ya-commerce-logo')),
+  ));
   $display_title = t('Yandex.Money') . '<br/>' . $icon;
 
   $payment_methods['ya_commerce'] = array(
@@ -116,7 +119,6 @@ function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method)
 function ya_commerce_redirect_form_validate($order, $payment_method) {
   return TRUE;
 }
-
 
 /**
  * Implements hook_yamoney_shop_params_alter().
