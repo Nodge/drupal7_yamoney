@@ -84,10 +84,6 @@ function yamoney_uninstall() {
     'yamoney_formcomment',
     'yamoney_success_text',
     'yamoney_fail_text',
-    '',
-    '',
-    '',
-    '',
   );
 
   foreach ($variables as $variable) {
