@@ -9,11 +9,12 @@ Integrate Yandex.Money service with the following Drupal 7 modules:
 
 Also provides donation block.
 
-Note: Only Drupal Commerce is working now.
+Note: Ubercart integration has not been tested enough.
+Note: Donation block need to be upgraded (does not work now)
 
 ### Todo
 
 * Readme
 * Log errors and payments to watchdog
-* Fix Ubercart integration
+* Test Ubercart integration
 * Fix Donate module

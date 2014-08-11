@@ -67,6 +67,64 @@ function yamoney_schema() {
   return $schema;
 }
 
-function book_uninstall() {
+/**
+ * Allow fields 'uid', 'mail', 'order_id' and 'data' to be NULL
+ */
+function yamoney_update_7100(&$sandbox) {
+  $change_fields = array(
+    'uid' => array(
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => FALSE,
+      'default' => 0,
+      'description' => "Transaction user id ",
+    ),
+    'mail' => array(
+      'type' => 'varchar',
+      'length' => 64,
+      'not null' => FALSE,
+      'default' => '',
+      'description' => "The transaction status.",
+    ),
+    'order_id' => array(
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => FALSE,
+      'default' => 0,
+      'description' => "Order id ",
+    ),
+    'data' => array(
+      'type' => 'blob',
+      'not null' => FALSE,
+      'size' => 'big',
+      'description' => 'Serialized array of additional trasaction information.',
+    ),
+  );
+  foreach ($change_fields as $field_name => $field_config) {
+    db_change_field('yamoney_transaction', $field_name, $field_name, $field_config);
+  }
+}
 
+/**
+ *
+ */
+function yamoney_uninstall() {
+  $variables = array(
+    'yamoney_ip',
+    'yamoney_mode',
+    'yamoney_payment_method',
+    'yamoney_default_payment_method',
+    'yamoney_shop',
+    'yamoney_shop_id',
+    'yamoney_scid',
+    'yamoney_secret',
+    'yamoney_receiver',
+    'yamoney_formcomment',
+    'yamoney_success_text',
+    'yamoney_fail_text',
+  );
+
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
 }
