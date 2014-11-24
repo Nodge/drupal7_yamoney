@@ -1,4 +1,8 @@
 
+### 24.11.2014
+* Fixed SQL error for anonymous users (or users with empty emails)
+* Added different widget to display payment methods for Drupal Commerce (select, radios, images) 
+
 ### 04.07.2014
 * Fixed payments by anonymous users
 * Fixed transaction.inc loading bugs

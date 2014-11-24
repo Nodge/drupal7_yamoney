@@ -28,6 +28,24 @@ function ya_commerce_commerce_payment_method_info() {
 }
 
 /**
+ * Implements hook_commerce_payment_method_settings_form().
+ */
+function ya_commerce_settings_form($settings = array()) {
+  $form['widget'] = array(
+    '#type' => 'radios',
+    '#title' => t('Widget type'),
+    '#default_value' => isset($settings['widget']) ? $settings['widget'] : 'select',
+    '#options' => array(
+      'select' => 'Select list',
+      'radios' => 'Radio buttons',
+      'images' => 'Images',
+    ),
+  );
+
+  return $form;
+}
+
+/**
  * Payment method callback: checkout form.
  */
 function ya_commerce_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
@@ -39,13 +57,68 @@ function ya_commerce_submit_form($payment_method, $pane_values, $checkout_pane, 
     $disabled = TRUE;
   }
 
-  $form['payment_method'] = array(
-    '#type' => 'select',
-    '#title' => t('Select your payment type:'),
-    '#default_value' => variable_get('yamoney_default_payment_method', YAMONEY_DEFAULT_PAYMENT_METHOD),
-    '#options' => $methods,
-    '#disabled' => $disabled,
-  );
+  $default_value = variable_get('yamoney_default_payment_method', YAMONEY_DEFAULT_PAYMENT_METHOD);
+  if (isset($pane_values['payment_details']['payment_method'])) {
+    $default_value = $pane_values['payment_details']['payment_method'];
+  }
+
+  if (!isset($payment_method['settings']['widget'])) {
+    $payment_method['settings']['widget'] = 'select';
+  }
+
+  switch ($payment_method['settings']['widget']) {
+    case 'select':
+      $form['payment_method'] = array(
+        '#type' => 'select',
+        '#title' => t('Select your payment type:'),
+        '#default_value' => $default_value,
+        '#options' => $methods,
+        '#disabled' => $disabled,
+      );
+      break;
+
+    case 'radios':
+      $options = array();
+      foreach ($methods as $key => $title) {
+        $options[$key] = '<span class="ya-commerce__method ya-commerce__method_'.$key.'">'.$title.'</span>';
+      }
+      $form['payment_method'] = array(
+        '#type' => 'radios',
+        '#title' => t('Select your payment type:'),
+        '#default_value' => $default_value,
+        '#options' => $options,
+        '#disabled' => $disabled,
+      );
+      break;
+
+    case 'images':
+      $options = array();
+      $path = drupal_get_path('module', 'ya_commerce') . '/images/';
+      foreach ($methods as $key => $title) {
+        $options[$key] = '';
+
+        $options[$key] = '<span class=" ya-commerce__method_'.$key.'">';
+
+        $options[$key] = theme('image', array(
+            'path' => $path . 'icon-'.$key.'.png',
+            'attributes' => array(
+              'class' => array('ya-commerce__method-icon')
+            ),
+          ));
+
+        $options[$key] .= '<span class="ya-commerce__method-title">'.$title.'</span>';
+
+        $options[$key] .= '</span>';
+      }
+      $form['payment_method'] = array(
+        '#type' => 'radios',
+        '#title' => t('Select your payment type:'),
+        '#default_value' => $default_value,
+        '#options' => $options,
+        '#disabled' => $disabled,
+      );
+      break;
+  }
 
   return $form;
 }
@@ -72,9 +145,9 @@ function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method)
   $amount = round(commerce_currency_amount_to_decimal($amount, $currency_code), 2);
 
   $transaction = new YAMoneyTransaction();
-  $transaction->uid = isset($user->uid) ? $user->uid : null;
+  $transaction->uid = isset($user->uid) ? $user->uid : '';
   $transaction->amount = $amount;
-  $transaction->mail = isset($user->mail) ? $user->email : null;
+  $transaction->mail = isset($user->mail) ? $user->mail : '';
   $transaction->order_id = $order->order_id;
   if (!yamoney_transaction_save($transaction)) {
     $error_message = t('Can not save transaction.');
