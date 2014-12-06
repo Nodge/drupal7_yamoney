@@ -314,6 +314,8 @@ function yamoney_get_payment_methods() {
     'GP' => t('Pay terminal'),
     'MC' => t('Mobile phone'),
     'WM' => t('WebMoney'),
+    'AB' => t('Alpha-Click'),
+    'WM' => t('SberBank Online'),
   );
 }
 
