@@ -315,7 +315,7 @@ function yamoney_get_payment_methods() {
     'MC' => t('Mobile phone'),
     'WM' => t('WebMoney'),
     'AB' => t('Alpha-Click'),
-    'WM' => t('SberBank Online'),
+    'SB' => t('SberBank Online'),
   );
 }
 
