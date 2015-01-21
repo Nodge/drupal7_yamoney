@@ -145,11 +145,8 @@ function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method)
   $amount = round(commerce_currency_amount_to_decimal($amount, $currency_code), 2);
 
   $transaction = new YAMoneyTransaction();
-<<<<<<< HEAD
   $transaction->uid = isset($user->uid) ? $user->uid : 0;
-=======
   $transaction->uid = isset($user->uid) ? $user->uid : '';
->>>>>>> pr/5
   $transaction->amount = $amount;
   $transaction->mail = isset($user->mail) ? $user->mail : '';
   $transaction->order_id = $order->order_id;
