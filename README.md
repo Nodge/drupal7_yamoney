@@ -1,3 +1,5 @@
+Репозиторий перенесен: https://github.com/yandex-money/
+
 Drupal 7 yamoney module
 =======================
 
