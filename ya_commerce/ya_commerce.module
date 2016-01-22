@@ -6,11 +6,7 @@
 function ya_commerce_commerce_payment_method_info() {
   $payment_methods = array();
 
-  $icon = theme('image', array(
-    'path' => drupal_get_path('module', 'ya_commerce') . '/images/yandex-logo.png',
-    'attributes' => array('class' => array('ya-commerce-logo')),
-  ));
-  $display_title = t('Yandex.Money') . '<br/>' . $icon;
+  $display_title = t('Yandex.Money');
 
   $payment_methods['ya_commerce'] = array(
     'base' => 'ya_commerce',
@@ -300,4 +296,42 @@ function ya_commerce_yamoney_fail() {
   if (isset($_GET['shopFailURL'])) {
     drupal_goto($_GET['shopFailURL']);
   }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function ya_commerce_form_alter(&$form, &$form_state, $form_id) {
+  // If we're altering a checkout form that has the Yandex Money radio button...
+  if (strpos($form_id, 'commerce_checkout_form_') === 0 && !empty($form['commerce_payment']['payment_method'])) {
+    foreach ($form['commerce_payment']['payment_method']['#options'] as $key => &$value) {
+      list($method_id, $rule_name) = explode('|', $key);
+
+      // If we find YaCommerce method, change value for the option.
+      if ($method_id == 'ya_commerce') {
+        $value .= theme('ya_commerce_image');
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ya_commerce_theme($existing, $type, $theme, $path) {
+  return array(
+    'ya_commerce_image' => array(),
+  );
+}
+
+/**
+ * Returns image for Yandex Kassa.
+ */
+function theme_ya_commerce_image() {
+  $variables = array(
+    'path' => drupal_get_path('module', 'ya_commerce') . '/images/yandex-logo.png',
+    'attributes' => array('class' => array('ya-commerce-logo')),
+  );
+
+  return '<br/>' . theme('image', $variables);
 }
