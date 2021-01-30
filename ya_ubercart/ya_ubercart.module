@@ -147,9 +147,10 @@ function ya_ubercart_yamoney_process_payment_alter(&$payment) {
   $order = uc_order_load($transaction->order_id);
   if ($order) {
     //print_r($order);
+    uc_payment_enter($order->order_id, 'ya_ubercart', $transaction->amount, $order->uid, NULL, t('Yandex.Money transaction ID: @txn_id', array('@txn_id' => $transaction->ymid)));
     uc_cart_complete_sale($order);
     uc_cart_empty($order->uid);
-    uc_order_update_status($order->order_id, 'payment_received');
+    uc_order_comment_save($order->order_id, 0, t('Yandex.Money reported a payment of @amount @currency.', array('@amount' => uc_currency_format($transaction->amount, FALSE), '@currency' => $order->currency)));
     $payment['success'] = TRUE;
   }
   else {
