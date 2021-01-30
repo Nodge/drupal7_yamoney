@@ -122,6 +122,7 @@ function yamoney_uninstall() {
     'yamoney_formcomment',
     'yamoney_success_text',
     'yamoney_fail_text',
+    'ya_kassa_send_check'
   );
 
   foreach ($variables as $variable) {

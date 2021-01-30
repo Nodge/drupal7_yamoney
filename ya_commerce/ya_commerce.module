@@ -5,9 +5,13 @@
  */
 function ya_commerce_commerce_payment_method_info() {
   $payment_methods = array();
-
-  $display_title = t('Yandex.Money');
-
+    $icon_name = (variable_get('yamoney_shop', 0) == 0)?'yandex-logo':'kassa-logo';
+  $icon = theme('image', array(
+    'path' => drupal_get_path('module', 'ya_commerce') . '/images/'.$icon_name.'.png',
+    'attributes' => array('class' => array('ya-commerce-logo')),
+  ));
+  $display_title = (variable_get('yamoney_shop', 0))?t('Yandex.Kassa'):t('Yandex.Money');
+  $display_title .= '<br/>' . $icon;
   $payment_methods['ya_commerce'] = array(
     'base' => 'ya_commerce',
     'title' => t('Yandex.Money'),
@@ -52,6 +56,8 @@ function ya_commerce_submit_form($payment_method, $pane_values, $checkout_pane, 
   if (count($methods) === 1) {
     $disabled = TRUE;
   }
+
+  if (variable_get('yamoney_paymode')=='kassa' && variable_get('yamoney_shop', 0)) return;
 
   $default_value = variable_get('yamoney_default_payment_method', YAMONEY_DEFAULT_PAYMENT_METHOD);
   if (isset($pane_values['payment_details']['payment_method'])) {
@@ -126,6 +132,20 @@ function ya_commerce_submit_form_submit($payment_method, $pane_form, $pane_value
   $order->data['ya_commerce'] = $pane_values;
 }
 
+function getPriceByData($amount, $currency_code) {
+    $currency = commerce_currency_load($currency_code);
+    $amount_price = commerce_currency_amount_to_decimal($amount, $currency_code);
+    $price = number_format(commerce_currency_round(
+        abs($amount_price),
+        $currency
+    ),
+        $currency['decimals'],
+        $currency['decimal_separator'],
+        $currency['thousands_separator']
+    );
+
+    return $price;
+}
 
 /**
  * Payment method callback: redirect form.
@@ -146,6 +166,7 @@ function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method)
   $transaction->amount = $amount;
   $transaction->mail = isset($user->mail) ? $user->mail : '';
   $transaction->order_id = $order->order_id;
+
   if (!yamoney_transaction_save($transaction)) {
     $error_message = t('Can not save transaction.');
 
@@ -166,6 +187,62 @@ function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method)
   $target_url = yamoney_get_order_submission_url();
   $params = yamoney_get_order_submission_params($transaction);
 
+    $receipt = array();
+    if (variable_get('yamoney_send_check', false)) {
+        $receipt = array(
+            'customerContact' => $order->mail,
+            'items' => array(),
+        );
+
+        foreach ($order_wrapper->commerce_line_items as $delta => $line_item_wrapper) {
+            if ($line_item_wrapper->value()->type == 'product') {
+                $product = $line_item_wrapper->commerce_product->value();
+                $components = $product->commerce_price['und'][0]['data']['components'];
+                $tax_id = false;
+                foreach ($components as $component) {
+                    $info = explode('|', $component['name']);
+                    if (count($info) && $info[0] == 'tax') {
+                        $tax_id = $info[1];
+                        break;
+                    }
+                }
+
+                $receipt['items'][] = array(
+                    'quantity' => $line_item_wrapper->quantity->value(),
+                    'text' => substr($product->title, 0, 128),
+                    'tax' => ($tax_id && variable_get('yamoney_kassa_tax_'.$tax_id) ? variable_get('yamoney_kassa_tax_'.$tax_id) : 1),
+                    'price' => array(
+                        'amount' => number_format(getPriceByData($product->commerce_price['und'][0]['amount'], $product->commerce_price['und'][0]['currency_code']), 2, '.', ''),
+                        'currency' => 'RUB'
+                    ),
+                );
+            }
+
+            if ($line_item_wrapper->value()->type == 'shipping') {
+                $shipping = $line_item_wrapper->value();
+                $receipt['items'][] = array(
+                    'quantity' => 1,
+                    'text' => substr('Доставка', 0, 128),
+                    'tax' => 1,
+                    'price' => array(
+                        'amount' => number_format(getPriceByData(
+                            $shipping->commerce_total['und'][0]['amount'],
+                            $shipping->commerce_total['und'][0]['currency_code']),
+                            2,
+                            '.',
+                            ''
+                        ),
+                        'currency' => 'RUB'
+                    ),
+                );
+            }
+        }
+    }
+
+    if ($receipt) {
+        $params['ym_merchant_receipt'] = json_encode($receipt);
+    }
+
   $form = array();
   $form['#action'] = $target_url;
   foreach ($params as $key => $value) {
@@ -179,7 +256,10 @@ function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method)
     '#type' => 'submit',
     '#value' => t('Submit order'),
   );
-
+  $form['cms_name'] = array(
+      '#type' => 'hidden',
+      '#value' => "drupal-commerce",
+  );
   return $form;
 }
 
@@ -187,7 +267,7 @@ function ya_commerce_redirect_form($form, &$form_state, $order, $payment_method)
  * Payment method callback: redirect form return validation.
  */
 function ya_commerce_redirect_form_validate($order, $payment_method) {
-  return TRUE;
+    return TRUE;
 }
 
 /**
@@ -215,7 +295,7 @@ function ya_commerce_yamoney_quick_params_alter(&$params) {
   $order = commerce_order_load($params['order_id']);
 
   // Selected payment method
-  $params['payment-type'] = $order->data['ya_commerce']['payment_method'];
+  $params['paymentType'] = $order->data['ya_commerce']['payment_method'];
 }
 
 /**
@@ -296,42 +376,4 @@ function ya_commerce_yamoney_fail() {
   if (isset($_GET['shopFailURL'])) {
     drupal_goto($_GET['shopFailURL']);
   }
-}
-
-/**
- * Implements hook_form_alter().
- */
-function ya_commerce_form_alter(&$form, &$form_state, $form_id) {
-  // If we're altering a checkout form that has the Yandex Money radio button...
-  if (strpos($form_id, 'commerce_checkout_form_') === 0 && !empty($form['commerce_payment']['payment_method'])) {
-    foreach ($form['commerce_payment']['payment_method']['#options'] as $key => &$value) {
-      list($method_id, $rule_name) = explode('|', $key);
-
-      // If we find YaCommerce method, change value for the option.
-      if ($method_id == 'ya_commerce') {
-        $value .= theme('ya_commerce_image');
-      }
-    }
-  }
-}
-
-/**
- * Implements hook_theme().
- */
-function ya_commerce_theme($existing, $type, $theme, $path) {
-  return array(
-    'ya_commerce_image' => array(),
-  );
-}
-
-/**
- * Returns image for Yandex Kassa.
- */
-function theme_ya_commerce_image() {
-  $variables = array(
-    'path' => drupal_get_path('module', 'ya_commerce') . '/images/yandex-logo.png',
-    'attributes' => array('class' => array('ya-commerce-logo')),
-  );
-
-  return '<br/>' . theme('image', $variables);
 }
